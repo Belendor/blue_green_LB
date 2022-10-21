@@ -1,9 +1,3 @@
-variable "aws_region" {
-  description = "AWS region"
-  type        = string
-  default     = "eu-central-1"
-}
-
 variable "instance_type" {
   description = "Instance type for EC2 instances"
   type        = string
@@ -16,14 +10,7 @@ variable "ami_id" {
   default     = "ami-0e2031728ef69a466"
 }
 
-variable "vpc_id" {
-  description = "VPC which you want to use"
-  type        = string
-  default     = "vpc-0c978c7db11ae32e9"
-}
-
 variable "rules" {
-
   type = list(object({
     port        = number
     proto       = string
@@ -40,18 +27,12 @@ variable "rules" {
       port        = 22
       proto       = "tcp"
       cidr_blocks = ["0.0.0.0/0"]
-    },
-    {
-      port        = 3689
-      proto       = "tcp"
-      cidr_blocks = ["0.0.0.0/0"]
     }
   ]
 }
 
-
-# variable "subnet_id" {
-#   description = "Subnet in which you want to create instances"
-#   type        = string
-#   default     = "subnet-01e63460073970f31"
-# }
+variable "instances" {
+  description = "List of instance names"
+  type        = list(string)
+  default     = ["Blue", "Green"]
+}

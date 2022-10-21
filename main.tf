@@ -23,7 +23,6 @@ module "vpc" {
 }
 
 resource "aws_security_group" "my-sg" {
-
   vpc_id = module.vpc.vpc_id
   name   = join("_", ["sg", module.vpc.vpc_id])
 
@@ -61,17 +60,14 @@ resource "aws_key_pair" "generated_key" {
   public_key = tls_private_key.example.public_key_openssh
 }
 
-
 # -----------Instances---------
 module "ec2_instance" {
   source  = "terraform-aws-modules/ec2-instance/aws"
   version = "~> 3.0"
 
-  # for_each = toset(["ec2-code-deploy1", "ec2-code-deploy2", "ec2-code-deploy3", "ec2-code-deploy4"])
+  for_each = toset(var.instances)
 
-  name = "instance-1"
-  # name = "instance-${each.key}"
-
+  name = "instance-${each.key}"
 
   associate_public_ip_address = true
   ami                         = var.ami_id
@@ -81,7 +77,7 @@ module "ec2_instance" {
   subnet_id                   = module.vpc.public_subnets[0]
   user_data                   = <<-EOF
               #!/bin/bash
-              echo "Hello, World $ {each.key}" > index.html
+              echo "Hello, World $(hostname -f)" > index.html
               python3 -m http.server 80 &
               EOF
 
@@ -89,4 +85,3 @@ module "ec2_instance" {
     "lb" = "artur"
   }
 }
-
