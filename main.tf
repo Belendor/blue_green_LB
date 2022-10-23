@@ -85,3 +85,62 @@ module "ec2_instance" {
     "lb" = "artur"
   }
 }
+
+# ----------Load Balancer---------
+module "elb" {
+  source  = "terraform-aws-modules/elb/aws"
+  version = "3.0.1"
+  health_check = {
+    target              = "HTTP:80/"
+    interval            = 30
+    healthy_threshold   = 2
+    unhealthy_threshold = 2
+    timeout             = 5
+  }
+  listener = [
+    {
+      instance_port     = 80
+      instance_protocol = "HTTP"
+      lb_port           = 80
+      lb_protocol       = "HTTP"
+    }
+  ]
+
+  name = "elb"
+
+  security_groups = [aws_security_group.my-sg.id]
+  subnets = [module.vpc.public_subnets[0]]
+  instances = [for instance in module.ec2_instance : instance.id]
+  depends_on = [module.ec2_instance]
+  number_of_instances = 2
+}
+
+# ----------Auto Scaling Group----------
+resource "aws_launch_configuration" "lc" {
+  image_id      = var.ami_id
+  instance_type = "t2.micro"
+  security_groups = ["${aws_security_group.my-sg.id}"]
+  key_name = aws_key_pair.generated_key.key_name
+  user_data                   = <<-EOF
+            #!/bin/bash
+            echo "Hello, World $(hostname -f)" > index.html
+            python3 -m http.server 80 &
+            EOF
+  depends_on = [module.ec2_instance]
+  lifecycle {
+      create_before_destroy = true
+  }
+}
+
+resource "aws_autoscaling_group" "asg" {
+  vpc_zone_identifier = ["${module.vpc.public_subnets[0]}"]
+  desired_capacity   = 2
+  max_size           = 2
+  min_size           = 2
+  load_balancers = [module.elb.elb_id] 
+  launch_configuration = aws_launch_configuration.lc.id
+  depends_on = [aws_launch_configuration.lc]
+  lifecycle {
+      create_before_destroy = true
+  }  
+}
